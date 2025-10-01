@@ -1,5 +1,5 @@
-ARG ALPINE_VERSION=3.15.4
-FROM gautada/alpine:$ALPINE_VERSION as final
+ARG ALPINE_VERSION=3.22
+FROM gautada/alpine:$ALPINE_VERSION
 
 LABEL source="https://github.com/gautada/nginx-container.git"
 LABEL maintainer="Adam Gautier <adam@gautier.org>"
