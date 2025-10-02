@@ -1,49 +1,75 @@
 ARG ALPINE_VERSION=3.22
+
 FROM gautada/alpine:$ALPINE_VERSION
 
-LABEL source="https://github.com/gautada/nginx-container.git"
-LABEL maintainer="Adam Gautier <adam@gautier.org>"
-LABEL description="An nginx container"
+# ╭――――――――――――――――――――╮
+# │ VARIABLES          │
+# ╰――――――――――――――――――――╯
+ARG IMAGE_NAME="nginx"
+ARG PACKAGE_VERSION="1.28.0"
+ARG PACKAGE_RELEASE="r5"
 
-USER root
-WORKDIR /
+# ╭――――――――――――――――――――╮
+# │ METADATA           │
+# ╰――――――――――――――――――――╯
+LABEL org.opencontainers.image.title="${IMAGE_NAME}"
+LABEL org.opencontainers.image.description="A test container for nginx."
+LABEL org.opencontainers.image.url="https://hub.docker.com/r/gautada/${IMAGE_NAME}"
+LABEL org.opencontainers.image.source="https://github.com/gautada/${IMAGE_NAME}"
+LABEL org.opencontainers.image.version="${PACKAGE_VERSION}"
+LABEL org.opencontainers.image.license="Upstream"
 
-EXPOSE 80/tcp
-# EXPOSE 443/tcp
-
-ARG NGINX_VERSION=1.20.2
-ARG NGINX_PACKAGE="$NGINX_VERSION"-r1
-# RUN /sbin/apk add --no-cache nginx=$NGINX_PACKAGE
-RUN /sbin/apk add --no-cache nginx openssl curl wget git bash libressl
-
-
-RUN /bin/echo "%wheel         ALL = (ALL) NOPASSWD: /usr/sbin/nginx" >> /etc/sudoers
-
-RUN rm /etc/container/entrypoint
-COPY entrypoint /etc/container/entrypoint
-COPY http-default.conf /etc/nginx/http.d/default.conf
-# COPY https-default.conf /etc/nginx/http.d/https-default.conf
-COPY index.html /home/nginx/www/index.html
-# COPY pki/* /etc/nginx/pki/
-
-RUN ln -sf /dev/stdout /var/log/nginx/access.log && ln -sf /dev/stderr /var/log/nginx/error.log
-
-
+# ╭――――――――――――――――――――╮
+# │ USER               │
+# ╰――――――――――――――――――――╯
 ARG USER=nginx
-# VOLUME /opt/$USER
-# nginix group & user is already created
-# && /usr/sbin/addgroup $USER \
-# && /usr/sbin/adduser -D -s /bin/ash -G $USER $USER \
-RUN /bin/mkdir -p /opt/$USER
-RUN /usr/sbin/usermod -aG wheel $USER
-RUN /bin/echo "$USER:$USER" | chpasswd
-RUN /bin/chown $USER:$USER -R /opt/$USER
-RUN chown nginx:nginx -R /etc/nginx /home/nginx
+RUN /usr/sbin/usermod -l $USER alpine \
+ && /usr/sbin/usermod -d /home/$USER -m $USER \
+ && /usr/sbin/groupmod -n $USER alpine \
+ && /bin/echo "$USER:$USER" | /usr/sbin/chpasswd
 
+# ╭――――――――――――――――――――╮
+# │ BACKUP             │
+# ╰――――――――――――――――――――╯
+# COPY backup.sh /etc/container/backup
+
+# ╭――――――――――――――――――――╮
+# │ ENTRYPOINT         │
+# ╰――――――――――――――――――――╯
+COPY entrypoint.sh /etc/container/entrypoint
+
+# ╭――――――――――――――――――――╮
+# │ PRIVILEGE          │
+# ╰――――――――――――――――――――╯
+COPY privileges /etc/sudoers.d/nginx
+
+# ╭――――――――――――――――――――╮
+# │ APPLICATION        │
+# ╰――――――――――――――――――――╯
+RUN /sbin/apk add --no-cache \
+    "${IMAGE_NAME}=${PACKAGE_VERSION}-${PACKAGE_RELEASE}" bind-tools openssl \
+    nginx-mod-http-dav-ext \
+ && openssl req -x509 -nodes -days 365 \
+    -subj "/C=US/ST=North Carolina/L=Charlotte/O=Self-Signed Auto-Generated Certificate/OU=nginx/CN=localhost/emailAddress=nginx@fqdn.domain.tld" \
+    -newkey rsa:2048 -keyout /etc/ssl/private/nginx.key \
+    -out /etc/ssl/certs/nginx.crt
+RUN mv /etc/nginx/http.d/default.conf /etc/nginx/http.d/default.conf~
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY inline.conf /etc/nginx/http.d/inline.conf
+COPY files.conf /etc/nginx/http.d/files.conf
+COPY proxy.conf /etc/nginx/http.d/proxy.conf
+COPY webdav.conf /etc/nginx/httpd.d/webdav.conf
+COPY index.html /var/lib/nginx/html/files/index.html
+
+# ╭――――――――――――――――――――╮
+# │ CONTAINER          │
+# ╰――――――――――――――――――――╯
+RUN chown -R $USER:$USER /usr/share/nginx
 USER $USER
+VOLUME /mnt/volumes/backup
+VOLUME /mnt/volumes/configmaps
+VOLUME /mnt/volumes/container
+VOLUME /mnt/volumes/secrets
+EXPOSE 8080
+EXPOSE 8443
 WORKDIR /home/$USER
-
-
-RUN echo "sudo /usr/sbin/nginx -g 'daemon off;'" > /home/nginx/go \
- && chmod +x /home/nginx/go
-
