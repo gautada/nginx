@@ -48,18 +48,18 @@ COPY privileges /etc/sudoers.d/nginx
 # ╰――――――――――――――――――――╯
 RUN /sbin/apk add --no-cache \
     "${IMAGE_NAME}=${PACKAGE_VERSION}-${PACKAGE_RELEASE}" bind-tools openssl \
-    nginx-mod-http-dav-ext \
+    nginx-mod-http-dav-ext grep libxml2-utils \
  && openssl req -x509 -nodes -days 365 \
     -subj "/C=US/ST=North Carolina/L=Charlotte/O=Self-Signed Auto-Generated Certificate/OU=nginx/CN=localhost/emailAddress=nginx@fqdn.domain.tld" \
     -newkey rsa:2048 -keyout /etc/ssl/private/nginx.key \
     -out /etc/ssl/certs/nginx.crt
 RUN mv /etc/nginx/http.d/default.conf /etc/nginx/http.d/default.conf~
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY inline.conf /etc/nginx/http.d/inline.conf
-COPY files.conf /etc/nginx/http.d/files.conf
-COPY proxy.conf /etc/nginx/http.d/proxy.conf
-COPY webdav.conf /etc/nginx/httpd.d/webdav.conf
+# COPY inline.conf /etc/nginx/http.d/inline.conf
+COPY files.conf /etc/nginx/http.d/00-files.conf
 COPY index.html /var/lib/nginx/html/files/index.html
+COPY proxy.conf /etc/nginx/http.d/20-proxy.conf
+COPY webdav.conf /etc/nginx/http.d/99-webdav.conf
 
 # ╭――――――――――――――――――――╮
 # │ CONTAINER          │

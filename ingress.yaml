@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: podman-local
+  namespace: code
+  annotations:
+    # Let large uploads pass
+    nginx.ingress.kubernetes.io/proxy-body-size: "200m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+
+    # Make sure the hop to your nginx pod is HTTP/1.1, not h2
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+
+    # Helpful for streaming uploads (optional)
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+spec:
+  ingressClassName: public
+  rules:
+  - host: podman.gautier.org
+    http:
+      paths:
+      # Route WebDAV subtree explicitly, no rewrites
+      - path: /webdav/
+        pathType: Prefix
+        backend:
+          service:
+            name: podman
+            port:
+              number: 8080
+      # Everything else (your landing page, /files, etc.)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: podman
+            port:
+              number: 8080
+
