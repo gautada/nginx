@@ -53,19 +53,22 @@ RUN /sbin/apk add --no-cache \
     -subj "/C=US/ST=North Carolina/L=Charlotte/O=Self-Signed Auto-Generated Certificate/OU=nginx/CN=localhost/emailAddress=nginx@fqdn.domain.tld" \
     -newkey rsa:2048 -keyout /etc/ssl/private/nginx.key \
     -out /etc/ssl/certs/nginx.crt
-RUN mv /etc/nginx/http.d/default.conf /etc/nginx/http.d/default.conf~
+# RUN mv /etc/nginx/http.d/default.conf /etc/nginx/http.d/default.conf~
 COPY nginx.conf /etc/nginx/nginx.conf
 # COPY inline.conf /etc/nginx/http.d/inline.conf
-COPY files.conf /etc/nginx/http.d/00-files.conf
-COPY index.html /var/lib/nginx/html/files/index.html
-COPY proxy.conf /etc/nginx/http.d/20-proxy.conf
-COPY webdav.conf /etc/nginx/http.d/99-webdav.conf
+# COPY files.conf /etc/nginx/locations/static.conf
+# COPY index.html /var/lib/nginx/html/static/index.html
+# COPY proxy.conf /etc/nginx/locations/proxy.conf
+# COPY webdav.conf /etc/nginx/locations/webdav.conf
+# RUN ln -fsv /etc/nginx/locations/static.conf /etc/nginx/location.conf
+COPY location.conf /etc/nginx/location.conf
 
 # ╭――――――――――――――――――――╮
 # │ CONTAINER          │
 # ╰――――――――――――――――――――╯
 RUN chown -R $USER:$USER /usr/share/nginx
 USER $USER
+COPY htpasswd /etc/nginx/htpasswd
 VOLUME /mnt/volumes/backup
 VOLUME /mnt/volumes/configmaps
 VOLUME /mnt/volumes/container

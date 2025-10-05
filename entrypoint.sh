@@ -11,5 +11,8 @@ container_version() {
 }
 
 container_entrypoint() {
- sudo /usr/sbin/nginx -g "daemon off;"
+  # set -x
+  # ln -fsv "/etc/nginx/locations/${NGINX_LOCATION:-static}.conf" \
+  #  /etc/nginx/location.conf
+  /usr/sbin/nginx -g "daemon off;"
 }
